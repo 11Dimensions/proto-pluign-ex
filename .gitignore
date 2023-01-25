@@ -1,0 +1,14 @@
+*.class
+*.log
+target
+.idea
+.metals
+.bloop
+metals.sbt
+examples/project/metals.sbt
+.vscode
+.pgv
+bazelisk
+.bsp
+executor.exe
+.history

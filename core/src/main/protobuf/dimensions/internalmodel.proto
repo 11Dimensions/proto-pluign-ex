@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package dimensions.internalmodel;
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FileOptions {
+    InternalMappingOptions internal_model = 67801;
+}
+
+message InternalMappingOptions {
+    Option my_option = 1;
+}
+
+message Option {
+    repeated ClassMappings mapping = 1;
+}
+
+message ClassMappings {
+    string name = 1;
+    repeated FieldMappings field_map = 2;
+}
+
+message FieldMappings {
+    string name = 1;
+    string class = 2;
+}

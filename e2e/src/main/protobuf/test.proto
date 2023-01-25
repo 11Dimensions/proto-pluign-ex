@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package com.dimensions;
+
+import "dimensions/internalmodel.proto";
+
+option (.dimensions.internalmodel.internal_model).my_option = {
+  mapping : [
+    {
+      name : 'com.dimensions.TestMessage'
+      field_map : [
+        {name: "a", class: "com.dimensions.Test"}
+      ]
+
+    }
+  ]
+};
+
+enum Color {
+    UNKNOWN = 0;
+    RED = 1;
+    GREEN = 2;
+    BLUE = 3;
+}
+
+message TestMessage {
+    string a = 1;
+    int32 b = 2;
+    Color c = 3;
+    NestedMessage msg = 4;
+    message NestedMessage {
+      Color color = 1;
+    }
+}
