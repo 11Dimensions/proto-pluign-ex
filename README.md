@@ -39,3 +39,24 @@ or
 > e2eJVM2_12/test
 ```
 
+Generated Code Example
+```
+package com.dimensions.test
+
+import scala.util.Try
+
+case class InternalTestMessage(
+  a: com.dimensions.Test,
+  b: _root_.scala.Int,
+  c: com.dimensions.test.Color,
+  msg: _root_.scala.Option[com.dimensions.test.TestMessage.NestedMessage],
+)
+
+object InternalTestMessage {
+  def fromOriginal(v: com.dimensions.test.TestMessage): Try[InternalTestMessage] = {
+    for {
+    a <- implicitly[com.dimensions.InternalValidator[_root_.scala.Predef.String, com.dimensions.Test]].validate(v.a)
+    } yield(InternalTestMessage(a, v.b, v.c, v.msg))
+  }
+}
+```
