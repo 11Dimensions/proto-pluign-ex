@@ -91,28 +91,78 @@ class MessagePrinter(
     convertedMapping.get(message.getFullName()) match {
       case None => fp
       case Some(value) =>
-        val header = fp
-          .add("import scala.util.Try")
-          .newline
+        fp.newline
           .add(s"case class ${MessageObject.name}(")
-          .indented(
-            _.print(message.getFields().asScala) { (fp, fd) => printField(fp, fd, value) }
+          .indented { fp =>
+            val base = fp.print(message.getFields().asScala) { (fp, fd) =>
+              printField(fp, fd, value)
+            }
+            if (message.preservesUnknownFields) {
+              base.add(
+                "unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty"
+              )
+            } else {
+              base
+            }
+          }
+          .add(
+            s") extends com.dimensions.internalmodel.GeneratedInternalModel[${message.scalaType.fullName}]"
           )
-          .add(")")
-          .add("")
-          .add(s"object ${MessageObject.name} {")
-          .indented(
-            _.add(
-              s"def fromOriginal(v: ${message.scalaType.fullName}): Try[${MessageObject.name}] = {"
+          .newline
+          .add(
+            s"object ${MessageObject.name} extends com.dimensions.internalmodel.GeneratedInternalModelCompanion[${message.scalaType.fullName}, ${MessageObject.name}] {"
+          )
+          .newline
+          .indented { fp =>
+            fp.indented(
+              _.add(
+                s"implicit def messageCompanion: com.dimensions.internalmodel.GeneratedInternalModelCompanion[${message.scalaType.fullName}, ${MessageObject.name}] = this"
+              ).newline
+                .add(
+                  s"override def validate(v: ${message.scalaType.fullName}): Either[com.dimensions.internalmodel.FailureReason, ${MessageObject.name}] = {"
+                )
+                .indented(v => validateFieldsPrinter(v, message.getFields().asScala, value))
+                .add("}")
+            ).indented(
+              _.add(
+                s"override def toProto(internal: ${MessageObject.name}): ${message.scalaType.fullName} = {"
+              ).indented(reversablePrinter(_, message.getFields().asScala, value)).add("}")
             )
-          )
-        validateFieldsPringer(header, message.getFields().asScala, value)
-          .add("}")
+          }
           .add("}")
     }
   }
 
-  def validateFieldsPringer(
+  def reversablePrinter(
+      fp: FunctionalPrinter,
+      fds: Buffer[FieldDescriptor],
+      matcher: Map[String, String]
+  ) = {
+    fds
+      .map(fd => (fd, matcher.get(fd.getName())))
+      .foldRight(fp) {
+        case ((fd, Some(value)), printer) =>
+          printer.add(
+            s"val ${fd.scalaName} = implicitly[com.dimensions.internalmodel.InternalTypeMapper[${fd.scalaTypeName}, ${value}]].toBase(internal.${fd.scalaName})"
+          )
+        case ((fd, None), printer) => printer
+      }
+      .add(s"${message.scalaType.fullName}(${fds
+          .map { fd =>
+            if (!matcher.contains(fd.getName())) {
+              s"internal.${fd.scalaName}"
+            } else {
+              fd.scalaName
+            }
+          }
+          .mkString(", ")}${if (message.preservesUnknownFields) {
+          ", internal.unknownFields"
+        } else {
+          ""
+        }})")
+  }
+
+  def validateFieldsPrinter(
       fp: FunctionalPrinter,
       fds: Buffer[FieldDescriptor],
       matcher: Map[String, String]
@@ -122,8 +172,10 @@ class MessagePrinter(
       .map(fd => (fd, matcher.get(fd.getName())))
       .foldRight(header) {
         case ((fd, Some(value)), printer) =>
-          printer.add(
-            s"${fd.scalaName} <- implicitly[com.dimensions.InternalValidator[${fd.scalaTypeName}, ${value}]].validate(v.${fd.scalaName})"
+          printer.indented(
+            _.add(
+              s"${fd.scalaName} <- implicitly[com.dimensions.internalmodel.InternalTypeMapper[${fd.scalaTypeName}, ${value}]].toCustom(v.${fd.scalaName})"
+            )
           )
         case ((fd, None), printer) => printer
       }
@@ -135,7 +187,11 @@ class MessagePrinter(
               fd.scalaName
             }
           }
-          .mkString(", ")}))")
+          .mkString(", ")}${if (message.preservesUnknownFields) {
+          ", v.unknownFields"
+        } else {
+          ""
+        }}))")
 
   }
   // fp
