@@ -36,7 +36,6 @@ object CodeGenerator extends CodeGenApp {
   def process(request: CodeGenRequest): CodeGenResponse =
     ProtobufGenerator.parseParameters(request.parameter) match {
       case Right(params) =>
-
         // Implicits gives you extension methods that provide ScalaPB names and types
         // for protobuf entities.
         val implicits =
@@ -47,27 +46,32 @@ object CodeGenerator extends CodeGenApp {
         CodeGenResponse.succeed(
           for {
             file <- request.filesToGenerate
-            desc = InternalMappingOptions.fromJavaProto(file.getOptions().getExtension(JIE.internalModel))
+            desc = InternalMappingOptions.fromJavaProto(
+              file.getOptions().getExtension(JIE.internalModel)
+            )
             message <- file.getMessageTypes().asScala
           } yield new MessagePrinter(message, implicits, desc).result
-      )
-      case Left(error)   =>
+        )
+      case Left(error) =>
         CodeGenResponse.fail(error)
     }
 }
 
-class MessagePrinter(message: Descriptor, implicits: DescriptorImplicits, name: InternalMappingOptions) {
+class MessagePrinter(
+    message: Descriptor,
+    implicits: DescriptorImplicits,
+    name: InternalMappingOptions
+) {
   import implicits._
-
 
   case class ClassName(str: String)
   val convertedMapping = {
     (for {
       options <- name.myOption
-      elements = options.mapping.map(
-        cm => Map(cm.name -> cm.fieldMap.map(e => (e.name, e._class)).toMap)
+      elements = options.mapping.map(cm =>
+        Map(cm.name -> cm.fieldMap.map(e => (e.name, e._class)).toMap)
       )
-    } yield (elements.reduce(_++_))).getOrElse(Map.empty)
+    } yield (elements.reduce(_ ++ _))).getOrElse(Map.empty)
   }
 
   private val MessageObject =
@@ -92,60 +96,77 @@ class MessagePrinter(message: Descriptor, implicits: DescriptorImplicits, name: 
           .newline
           .add(s"case class ${MessageObject.name}(")
           .indented(
-            _.print(message.getFields().asScala){(fp, fd) => printField(fp, fd, value)}
+            _.print(message.getFields().asScala) { (fp, fd) => printField(fp, fd, value) }
           )
           .add(")")
           .add("")
           .add(s"object ${MessageObject.name} {")
           .indented(
-            _.add(s"def fromOriginal(v: ${message.scalaType.fullName}): Try[${MessageObject.name}] = {")
+            _.add(
+              s"def fromOriginal(v: ${message.scalaType.fullName}): Try[${MessageObject.name}] = {"
+            )
           )
         validateFieldsPringer(header, message.getFields().asScala, value)
-        .add("}")
-        .add("}")
+          .add("}")
+          .add("}")
     }
   }
 
-
-  def validateFieldsPringer(fp: FunctionalPrinter, fds: Buffer[FieldDescriptor], matcher: Map[String,String]): FunctionalPrinter = {
+  def validateFieldsPringer(
+      fp: FunctionalPrinter,
+      fds: Buffer[FieldDescriptor],
+      matcher: Map[String, String]
+  ): FunctionalPrinter = {
     val header = fp.add("for {")
-    fds.map(fd => (fd, matcher.get(fd.getName()))).foldRight(header){
-      case ((fd, Some(value)), printer) => printer.add(s"${fd.scalaName} <- implicitly[com.dimensions.InternalValidator[${fd.scalaTypeName}, ${value}]].validate(v.${fd.scalaName})")
-      case ((fd, None), printer) => printer
-    }.add(s"} yield(${MessageObject.name}(${fds.map{ fd =>
-      if(!matcher.contains(fd.getName())){
-        s"v.${fd.scalaName}"
-      } else {
-        fd.scalaName
+    fds
+      .map(fd => (fd, matcher.get(fd.getName())))
+      .foldRight(header) {
+        case ((fd, Some(value)), printer) =>
+          printer.add(
+            s"${fd.scalaName} <- implicitly[com.dimensions.InternalValidator[${fd.scalaTypeName}, ${value}]].validate(v.${fd.scalaName})"
+          )
+        case ((fd, None), printer) => printer
       }
-    }.mkString(", ")}))")
-    
-  }
-    // fp
-    //   .add(s"object ${MessageObject.name} {")
-    //   .indented(
-    //     _.print(message.getFields().asScala){ (fp, fd) => printField(fp, fd) }
-    //     .add(s"//${message.getFullName}")
-    //     .print(message.getNestedTypes().asScala) {
-    //       (fp, m) => new MessagePrinter(m, implicits, name).printObject(fp)
-    //     }
-    //   )
-    //   .add("}")
+      .add(s"} yield(${MessageObject.name}(${fds
+          .map { fd =>
+            if (!matcher.contains(fd.getName())) {
+              s"v.${fd.scalaName}"
+            } else {
+              fd.scalaName
+            }
+          }
+          .mkString(", ")}))")
 
-  def printField(fp: FunctionalPrinter, fd: FieldDescriptor, matcher: Map[String,String]): FunctionalPrinter = {
+  }
+  // fp
+  //   .add(s"object ${MessageObject.name} {")
+  //   .indented(
+  //     _.print(message.getFields().asScala){ (fp, fd) => printField(fp, fd) }
+  //     .add(s"//${message.getFullName}")
+  //     .print(message.getNestedTypes().asScala) {
+  //       (fp, m) => new MessagePrinter(m, implicits, name).printObject(fp)
+  //     }
+  //   )
+  //   .add("}")
+
+  def printField(
+      fp: FunctionalPrinter,
+      fd: FieldDescriptor,
+      matcher: Map[String, String]
+  ): FunctionalPrinter = {
     matcher.get(fd.getName()) match {
-      case None => fp.add(s"${fd.getName()}: ${fd.scalaTypeName},")
+      case None        => fp.add(s"${fd.getName()}: ${fd.scalaTypeName},")
       case Some(value) => fp.add(s"${fd.getName()}: $value,")
     }
   }
 
-
   def content: String = {
     val fp = new FunctionalPrinter()
-    .add(
-      s"package ${message.getFile.scalaPackage.fullName}",
-      "",
-    ).call(printObject)
+      .add(
+        s"package ${message.getFile.scalaPackage.fullName}",
+        ""
+      )
+      .call(printObject)
     fp.result()
   }
 }

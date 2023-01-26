@@ -10,3 +10,5 @@ addSbtPlugin("com.thesamet" % "sbt-protoc-gen-project" % "0.1.6")
 // to the code generator so it can automatically add the correct version of
 // the core library to the build.
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.10.0")
+
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.0")

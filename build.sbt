@@ -13,15 +13,15 @@ lazy val core = (projectMatrix in file("core"))
   .settings(
     name := "internal-model-core",
     Compile / PB.targets := Seq(
-    PB.gens.java -> (Compile / sourceManaged).value / "scalapb",
-      scalapb.gen(javaConversions = true) -> (Compile / sourceManaged).value / "scalapb",
-  ),
-libraryDependencies ++= Seq(
+      PB.gens.java                        -> (Compile / sourceManaged).value / "scalapb",
+      scalapb.gen(javaConversions = true) -> (Compile / sourceManaged).value / "scalapb"
+    ),
+    libraryDependencies ++= Seq(
       "com.thesamet.scalapb.common-protos" %% "pgv-proto-scalapb_0.11" % (pgvVersion + "-0"),
       "com.thesamet.scalapb.common-protos" %% "pgv-proto-scalapb_0.11" % (pgvVersion + "-0") % "protobuf",
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion,
-      "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion % "protobuf",
-),
+      "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion % "protobuf"
+    )
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
 
@@ -29,18 +29,18 @@ lazy val codeGen = (projectMatrix in file("code-gen"))
   .enablePlugins(BuildInfoPlugin)
   .defaultAxes()
   .settings(
-     buildInfoKeys := Seq[BuildInfoKey](name, organization, version, scalaVersion, sbtVersion),
-     buildInfoPackage := "com.dimensions.compiler",
-libraryDependencies ++= Seq(
-   "com.thesamet.scalapb" %% "compilerplugin" % scalapb.compiler.Version.scalapbVersion,
-   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion,
-   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
- ),
- Compile / PB.protoSources += core.base / "src" / "main" / "protobuf",
- Compile / PB.targets := Seq(
-   PB.gens.java -> (Compile / sourceManaged).value / "scalapb",
-   scalapb.gen(javaConversions = true) -> (Compile / sourceManaged).value / "scalapb",
- )
+    buildInfoKeys    := Seq[BuildInfoKey](name, organization, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "com.dimensions.compiler",
+    libraryDependencies ++= Seq(
+      "com.thesamet.scalapb" %% "compilerplugin"  % scalapb.compiler.Version.scalapbVersion,
+      "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion,
+      "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf"
+    ),
+    Compile / PB.protoSources += core.base / "src" / "main" / "protobuf",
+    Compile / PB.targets := Seq(
+      PB.gens.java                        -> (Compile / sourceManaged).value / "scalapb",
+      scalapb.gen(javaConversions = true) -> (Compile / sourceManaged).value / "scalapb"
+    )
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
 
@@ -49,7 +49,7 @@ lazy val codeGenJVM212 = codeGen.jvm(Scala212)
 lazy val protocGenInternalmodel = protocGenProject("protoc-gen-internal-model", codeGenJVM212)
   .settings(
     Compile / mainClass := Some("com.dimensions.compiler.CodeGenerator"),
-    scalaVersion := Scala212
+    scalaVersion        := Scala212
   )
 
 lazy val e2e = (projectMatrix in file("e2e"))
@@ -57,7 +57,7 @@ lazy val e2e = (projectMatrix in file("e2e"))
   .enablePlugins(LocalCodeGenPlugin)
   .defaultAxes()
   .settings(
-    skip in publish := true,
+    skip in publish  := true,
     codeGenClasspath := (codeGenJVM212 / Compile / fullClasspath).value,
     libraryDependencies ++= Seq(
       "org.scalameta" %% "munit" % "0.7.9" % Test
@@ -65,7 +65,9 @@ lazy val e2e = (projectMatrix in file("e2e"))
     testFrameworks += new TestFramework("munit.Framework"),
     PB.targets in Compile := Seq(
       scalapb.gen() -> (sourceManaged in Compile).value / "scalapb",
-      genModule("com.dimensions.compiler.CodeGenerator$") -> (sourceManaged in Compile).value / "scalapb"
+      genModule(
+        "com.dimensions.compiler.CodeGenerator$"
+      ) -> (sourceManaged in Compile).value / "scalapb"
     )
   )
   .jvmPlatform(scalaVersions = Seq(Scala212, Scala213))
@@ -75,11 +77,11 @@ lazy val root: Project =
     .in(file("."))
     .settings(
       publishArtifact := false,
-      publish := {},
-      publishLocal := {}
+      publish         := {},
+      publishLocal    := {}
     )
     .aggregate(protocGenInternalmodel.agg)
     .aggregate(
       codeGen.projectRefs ++
-      core.projectRefs: _*
+        core.projectRefs: _*
     )
