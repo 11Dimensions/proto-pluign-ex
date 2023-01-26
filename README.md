@@ -43,20 +43,27 @@ Generated Code Example
 ```
 package com.dimensions.test
 
-import scala.util.Try
 
 case class InternalTestMessage(
   a: com.dimensions.Test,
   b: _root_.scala.Int,
   c: com.dimensions.test.Color,
   msg: _root_.scala.Option[com.dimensions.test.TestMessage.NestedMessage],
-)
+  unknownFields: _root_.scalapb.UnknownFieldSet = _root_.scalapb.UnknownFieldSet.empty
+) extends com.dimensions.internalmodel.GeneratedInternalModel[com.dimensions.test.TestMessage]
 
-object InternalTestMessage {
-  def fromOriginal(v: com.dimensions.test.TestMessage): Try[InternalTestMessage] = {
-    for {
-    a <- implicitly[com.dimensions.InternalValidator[_root_.scala.Predef.String, com.dimensions.Test]].validate(v.a)
-    } yield(InternalTestMessage(a, v.b, v.c, v.msg))
-  }
+object InternalTestMessage extends com.dimensions.internalmodel.GeneratedInternalModelCompanion[com.dimensions.test.TestMessage, InternalTestMessage] {
+
+    implicit def messageCompanion: com.dimensions.internalmodel.GeneratedInternalModelCompanion[com.dimensions.test.TestMessage, InternalTestMessage] = this
+    
+    override def validate(v: com.dimensions.test.TestMessage): Either[com.dimensions.internalmodel.FailureReason, InternalTestMessage] = {
+      for {
+        a <- implicitly[com.dimensions.internalmodel.InternalTypeMapper[_root_.scala.Predef.String, com.dimensions.Test]].toCustom(v.a)
+      } yield(InternalTestMessage(a, v.b, v.c, v.msg, v.unknownFields))
+    }
+    override def toProto(internal: InternalTestMessage): com.dimensions.test.TestMessage = {
+      val a = implicitly[com.dimensions.internalmodel.InternalTypeMapper[_root_.scala.Predef.String, com.dimensions.Test]].toBase(internal.a)
+      com.dimensions.test.TestMessage(a, internal.b, internal.c, internal.msg, internal.unknownFields)
+    }
 }
 ```
