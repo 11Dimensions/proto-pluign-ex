@@ -106,8 +106,13 @@ class MessagePrinter(
             }
           }
           .add(
-            s") extends com.dimensions.internalmodel.GeneratedInternalModel[${message.scalaType.fullName}]"
-          )
+            s") extends com.dimensions.internalmodel.GeneratedInternalModel[${message.scalaType.fullName}] {"
+          ).indented(
+              _.add(
+                s"override def toProto: ${message.scalaType.fullName} = {"
+              ).indented(reversablePrinter(_, message.getFields().asScala, value)).add("}")
+            )
+          .add("}")
           .newline
           .add(
             s"object ${MessageObject.name} extends com.dimensions.internalmodel.GeneratedInternalModelCompanion[${message.scalaType.fullName}, ${MessageObject.name}] {"
@@ -123,10 +128,6 @@ class MessagePrinter(
                 )
                 .indented(v => validateFieldsPrinter(v, message.getFields().asScala, value))
                 .add("}")
-            ).indented(
-              _.add(
-                s"override def toProto(internal: ${MessageObject.name}): ${message.scalaType.fullName} = {"
-              ).indented(reversablePrinter(_, message.getFields().asScala, value)).add("}")
             )
           }
           .add("}")
@@ -143,20 +144,20 @@ class MessagePrinter(
       .foldRight(fp) {
         case ((fd, Some(value)), printer) =>
           printer.add(
-            s"val ${fd.scalaName} = implicitly[com.dimensions.internalmodel.InternalTypeMapper[${fd.scalaTypeName}, ${value}]].toBase(internal.${fd.scalaName})"
+            s"val internal_${fd.scalaName} = implicitly[com.dimensions.internalmodel.InternalTypeMapper[${fd.scalaTypeName}, ${value}]].toBase(${fd.scalaName})"
           )
         case ((fd, None), printer) => printer
       }
       .add(s"${message.scalaType.fullName}(${fds
           .map { fd =>
             if (!matcher.contains(fd.getName())) {
-              s"internal.${fd.scalaName}"
-            } else {
               fd.scalaName
+            } else {
+              s"internal_${fd.scalaName}"
             }
           }
           .mkString(", ")}${if (message.preservesUnknownFields) {
-          ", internal.unknownFields"
+          ", unknownFields"
         } else {
           ""
         }})")

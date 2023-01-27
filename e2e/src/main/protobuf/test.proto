@@ -9,7 +9,7 @@ option (.dimensions.internalmodel.internal_model).my_option = {
     {
       name : 'com.dimensions.TestMessage'
       field_map : [
-        {name: "a", class: "com.dimensions.Test"}
+        {name: "a", class: "com.testdir.Test"}
       ]
 
     }
